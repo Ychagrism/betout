@@ -100,3 +100,33 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_predictions_modtime
 BEFORE UPDATE ON predictions
 FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+-- 5. Storage
+-- Create the Profile pics bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('Profile pics', 'Profile pics', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Set up RLS for storage.objects
+-- Allow public access to view files
+CREATE POLICY "Public Access"
+  ON storage.objects FOR SELECT
+  USING ( bucket_id = 'Profile pics' );
+
+-- Allow authenticated users to upload files to their folder
+CREATE POLICY "Users can upload their own profile pics"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK ( bucket_id = 'Profile pics' AND (storage.foldername(name))[1] = auth.uid()::text );
+
+-- Allow users to update their own files
+CREATE POLICY "Users can update their own profile pics"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING ( bucket_id = 'Profile pics' AND (storage.foldername(name))[1] = auth.uid()::text );
+
+-- Allow users to delete their own files
+CREATE POLICY "Users can delete their own profile pics"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING ( bucket_id = 'Profile pics' AND (storage.foldername(name))[1] = auth.uid()::text );
