@@ -153,14 +153,13 @@ export default function Home() {
           avatarUrl = await uploadAvatar(data.user.id);
         }
 
-        // Upsert profile data to ensure the row exists
-        await supabase
-          .from('profiles')
-          .upsert({ 
-            id: data.user.id, 
-            full_name: formData.fullName,
-            ...(avatarUrl && { avatar_url: avatarUrl })
-          });
+        // Update profile with avatar URL
+        if (avatarUrl) {
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', data.user.id);
+        }
 
         router.push('/leaderboard');
       }
